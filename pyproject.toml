@@ -1,0 +1,40 @@
+[project]
+name = "trustpilot-technical-take-home"
+description = "Tech challenge from Trustpilot"
+version = "0.0.0"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ipykernel",
+    "pre-commit",
+    "ruff",
+]
+test = [
+    "coverage",
+    "pytest",
+    "pytest-instafail",
+    "pytest-randomly",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "test"]
+
+[tool.ruff]
+line-length = 110
+extend-select = [
+    "I",  # isort, (auto-fixable)
+    "ISC",  # Implicit String concatenation
+    "RUF100",  # Unused noqa (auto-fixable)
+]
+ignore = [
+    "E501",  # line too long handled by black
+]
+
+[tool.ruff.format]
+line-ending = "lf"
+docstring-code-format = true
+docstring-code-line-length = 60

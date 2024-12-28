@@ -1,0 +1,61 @@
+# See https://pre-commit.com for more information
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-ast
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args:
+          - --fix=lf
+      - id: name-tests-test
+        args:
+          - --pytest-test-first
+      - id: no-commit-to-branch # main & master protected
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.5
+    hooks:
+      - id: forbid-tabs
+      - id: remove-tabs
+        name: Replace tabs with 4 whitespaces
+        args:
+          - --whitespaces-count=4
+        types_or:
+          - python
+          - sql
+          - json
+          - shell
+      - id: remove-tabs
+        name: Replace tabs with 2 whitespaces
+        args:
+          - --whitespaces-count=2
+        types_or:
+          - yaml
+          - markdown
+          - terraform
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.5.7
+    hooks:
+      # Ruff Linter
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [ python, pyi, jupyter ]
+      # Ruff Formatter
+      - id: ruff-format
+        types_or: [ python, pyi, jupyter ]
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.31.0
+    hooks:
+      - id: yamllint
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.41.0
+    hooks:
+      - id: markdownlint

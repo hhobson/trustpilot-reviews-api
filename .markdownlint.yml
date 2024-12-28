@@ -1,0 +1,12 @@
+# https://github.com/DavidAnson/markdownlint#rules--aliases
+---
+
+# MD003 heading-style/header-style - Heading style
+MD003:
+  style: "atx"
+
+# MD013 line-length - Line length
+MD013: false
+
+# MD024 no-duplicate-heading/no-duplicate-header - Multiple headings with the same content
+MD024: false
