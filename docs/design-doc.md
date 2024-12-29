@@ -4,26 +4,30 @@
 
 ### Overview
 
-Design for an api that allows CRUD operations to be performed on Trustpilot Review dataset.
+Design for an API that allows CRUD operations to be performed on Trustpilot Review dataset.
 
 ### Background
 
-The objective is to build an api as an interface for a database containing the Trustpilot Review dataset. The api needs to allow business users to perform CRUD operations on the dataset.
+The objective is to build an API as an interface to a database containing the Trustpilot Review dataset. The API needs to allow business users to perform CRUD operations on the dataset.
 
-As a take home task, this will be a toy application akin to a Proof of Concept. The code should be written to a production standard, but the architecture will not be production ready. There should be a route to production that doesn't require significant code changes and any unhandled edge cases should be highlighted.
+As a take home-task, this will be a toy application akin to a Proof of Concept. The code should be written to a production standard, but the architecture will not be production ready. There should be a route to production that doesn't require significant code changes and any unhandled edge cases should be highlighted.
 
 ### Assumptions
 
-The design has been build on the basis of the following assumptions. These have been made without consultation as this is a take home test with limited requirement details and no opportunity to get clarity.
+The design has been built on the basis of the following assumptions. These have been made without consultation as this is a take home test with limited requirement details and no opportunity to get clarity.
 
-- Use cases for the api are transactional in nature - with only the current state required
+- Use cases for the API are transactional in nature - with only the current state required
 - API is for business users only
-- The api is expected to return all the data including any Personally Identifiable Information (PII) fields
-- The CSV data is only for initial population of the database and the ability to update the database from a CSVs is not a required feature
-- Despite the [sample data](../data/dataops_tp_reviews.csv) being very small, it is assumed to be representation of the data the system should handle
+- The API is expected to return all the data including any Personally Identifiable Information (PII) fields
+- The CSV data is only for initial population of the database and the ability to update the database from CSVs is not a required feature
+- Despite the [sample data](../data/dataops_tp_reviews.csv) being very small, it is assumed to be a representation of the data the system should handle
 - All reviews must be made by a legitimate user, so must have a valid email address
 
 ### Out of Scope
+
+- A production ready
+- Detection and handling of PII in free text fields
+- Advanced user authentication or role-based access control
 
 ## Solution
 
@@ -32,6 +36,7 @@ The design has been build on the basis of the following assumptions. These have 
 #### Data Notes
 
 - The data is UTF-8 encoded
+- All reviews (content and titles) are in English
 - "Review Content" column can contain emojis
 - PII columns and other free text columns with PII risk, see [PII section](#personally-identifiable-information) for more details
 - Not all emails in "Email Address" column are valid
@@ -40,82 +45,409 @@ The design has been build on the basis of the following assumptions. These have 
 
 #### Data Pipeline
 
-As CSV data is just for initial population of the database, the ingestion will be run as part api container startup. Once the api is instantiated, all changes to the database should be done via the API.
+As CSV data is just for initial population of the database, the ingestion will be run as part API container startup. Once the API is instantiated, all changes to the database should be done via the API.
 
 Functionality:
 
-- Check if email field is valid email address - if not exclude data as without email, not possible to establish is review is legitimate (if issue then email validation should be implamed at collection)
-- Convert emojis to text
-- Convert country field to ISO-3166 country code or name
+1. Check if email field is valid email address
+    - Pydantic email type can be used for validation
+
+    - If the email is not valid email then the row should not be loaded into the database. Each user should have a unique email address and not having a valid email establishes issues regarding review legitimacy. If this is an issue then email validation should be implemented at the collection point for the data.
+
+1. Convert emojis to text
+    - Look at using [emoji Python package](https://carpedm20.github.io/emoji/docs) - the `emoji.demojize` method that will convert unicode emoji in a string with emoji shortcodes, eg. `"😊"` to `":smile:"`
+
+    - API users would then be responsible for converting from shortcode back to unicode emoji if required. This is something that can be done in most languages.
+
+    - emoji package supports the entire set of Emoji codes as defined by the [Unicode consortium](https://unicode.org/emoji/charts/full-emoji-list.html), so the risk that it will not be able to handle an emoji is low.
+
+    - Example of emoji:
+
+      ```python
+      import emoji
+      emoji_text = [
+          "Fun text and thumbs up. 👍",
+          "❌ Negative text and multi emojis... 😡",
+          "Nothing more than a tick... ✔️",
+          "Lots more emojis.... 📧  ⏳  📦  🤷‍♀️  📏  🙌  💰  🛑",
+          "Boring old text with not fun emojis",
+      ]
+
+      for text in emoji_text:
+          print(emoji.demojize(text))
+      ```
+
+1. Convert country field to ISO-3166 three-letter country code ([ISO-3166 alpha-3](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3))
+    - Look at using [pycountry Python package](https://github.com/pycountry/pycountry?tab=readme-ov-file#pycountry) - `pycountry.countries` has a `search_fuzzy` method that will return a Country object from a valid name or code
+
+    - `UK` is not the ISO-3166 country code for the United Kingdom (it's `GB` or `GBR`). To make sure UK is correctly identified as United Kingdom need to update the United Kingdom's entry to include an alt code `pycountry.countries.add_entry(alt_code="UK", alpha_2='GB', alpha_3='GBR', flag='🇬🇧', name='United Kingdom', numeric='826', official_name='United Kingdom of Great Britain and Northern Ireland')`
+
+    - There is a risk that the fuzzy search will return the incorrect country. For example [known issue](https://github.com/pycountry/pycountry/issues/115) with Nigeria ranked over Niger when searching for "Niger". It works for all counties in the sample data and this can be re-evaluated prior to productionisation.
+
+    - Example of pycountry:
+
+      ```python
+      from pycountry import countries
+      countries_list = ["USA", "UK", "Canada", "Australia", "Germany", "France", "Spain"]
+
+      countries.add_entry(alt_code="UK", alpha_2='GB', alpha_3='GBR', flag='🇬🇧', name='United Kingdom', numeric='826', official_name='United Kingdom of Great Britain and Northern Ireland')
+      for country in countries_list:
+          matched_countries = countries.search_fuzzy(country)
+          print(country, "  ---  ", matched_countries[0].alpha_3)
+      ```
+
+    - Alternatives Options:
+    -- [country-converter Python package](https://github.com/IndEcol/country_converter?tab=readme-ov-file#country-converter) - Has a dependency on Pandas so is going to be much larger
 
 #### Data Store
 
-For simplicity will use an embedded database stored locally within api container. As this is a transactional system, will use [SQLite](https://www.sqlite.org/).
+For simplicity will use an embedded database stored locally within API container. As this is a transactional system, will use [SQLite](https://www.sqlite.org/).
 
-Ingestion and API design should be setup so that it would be straight forward to switch a different database running on external server.
+<!-- TODO: Expand on reasoning behind choice of SQLite -->
+SQLite can and is used in production, though a client-server database like PostgreSQL might be a better fit for the application which has high write throughput requirements. SQLite's limitations will not be met by this application.
+
+Ingestion and API will use an Object Relational Mapper (ORM), so switching to a different database running on an external server in the future will be straightforward and require minimal code changes.
 
 ##### Data Model
 
-The data contains two clear entities Reviewer and Review, with a one-to-many relationship.
+The data contains two clear entities Reviewer and Review, which has a one-to-many relationship.
 
-Reviewer....
+![Entity Relationship Diagram](./assets/erd.png)
 
-- `reviewer_id` - **??** - should this be uuid or just use email encripted value?
-- `reviewer_email` - **TEXT** (PII) - shouldn't be stored in plain text
-- `reviewer_name` - **TEXT** (PII) - shouldn't be stored in plain text
-- `reviewer_country` - **TEXT** - should store be ISO-3166 country code or name
+###### Reviewer Table
 
-Review....
+| Column Name | Type | PII | Notes |
+|-------------|------|-----|-------|
+| reviewer_id | INTEGER | False | Primary Key |
+| reviewer_email | TEXT | True | Unique |
+| reviewer_name | TEXT | True |  |
+| reviewer_country | TEXT | False | ISO-3166 country code |
+| reviewer_created_at | TIMESTAMP | False | Nullable |
+| reviewer_updated_at | TIMESTAMP | False | Nullable, default NULL |
 
-- `review_id` - **INT**
-- `review_title` - **TEXT**
-- `review_rating` - **TEXT**
-- `review_content` - **TEXT**
-- `review_date` - **DATE**
+###### Review Table
+
+| Column Name | Type | PII | Notes |
+|-------------|------|-----|-------|
+| review_id | INTEGER | False | Primary Key |
+| reviewer_id | INTEGER | False | Foreign key (Reviewer) |
+| review_title | TEXT | False | Free text field |
+| review_rating | INTEGER | False | Between 1 & 5 |
+| review_content | TEXT | False | Free text field |
+| review_created_at | TIMESTAMP | False | |
+| review_updated_at | TIMESTAMP | False | Nullable, default NULL|
 
 #### API
 
 API paths should map to the data model, with `/reviewers` and `/reviews`
 
-##### Reviewers PATH
+##### Reviewers
 
-- GET `/reviewers` : Get all reviewers
-- POST `/reviewers` : Create a new reviewer
+###### GET `/reviewers`
 
-- GET `/reviewers/{id}` : Get the reviewer by id
-- PUT `/reviewers/{id}` : Update the reviewer by id
-- DELETE `/reviewers/{id}` : Delete the reviewer by id
+- Verb: `GET`
+- Path: `/reviewers`
+- Description: Get all reviewers
+- Pagination: Page-based pagination
+- Query Parameters
+  - `country`
+    - Filter reviewers from a specific country, using valid [ISO 3166 three letter country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3)
+    - Optional array (string)
+    - Example: `?country=aus`
+  - `perPage`
+    - The number of results per page (max 100)
+    - Optional int, default 30. Minimum 1 & Maximum 100
+    - Example: `?perPage=50`
+  - `page`
+    - The page number of the results to fetch
+    - Optional int, default 1. Minimum 1
+    - Example: `?page=2`
+- Example Response:
+  Status: `200`
 
-##### Reviews PATH
+  ```json
+  {
+    [
+      {
+        "id": 42,
+        "email": "arthur.dent@space.com",
+        "name": "Arthur Philip Dent",
+        "country": "GBR",
+        "created_at": "2024-12-29T11:11:11",
+        "updated_at": null,
+      },
+      {
+        "id": 43,
+        "email": "fordprefect@betelgeusian.xxx",
+        "name": "Ford Prefect",
+        "created_at": "2024-12-30T04:48:12",
+        "updated_at": "2024-12-30T04:55:37",
+      }
+    ]
+  "total": 2,
+  "next_page": null,
+  "previous_page" null
+  }
+  ```
 
-- GET `/reviews` : Get all reviews
-- POST `/reviews` : Create a new review
+###### POST `/reviewers`
 
-- GET `/reviews/{id}` : Get the review by id
-- PUT `/reviews/{id}` : Update the review by id
-- DELETE `/reviews/{id}` : Delete the review by id
+- Verb: `POST`
+- Path: `/reviewers`
+- Description: Create a new reviewer
+- Example Response:
+  Status: `201`
+
+  ```json
+  {
+    "id": 42,
+    "email": "arthur.dent@space.com",
+    "name": "Arthur Philip Dent",
+    "country": "GBR",
+    "created_at": "2024-12-29T11:11:11",
+    "updated_at": null,
+  }
+  ```
+
+- Errors:
+  - All reviewers must have unique email address, so if email address already exists in database return status code `409`
+
+###### GET `/reviewers/{id}`
+
+- Verb: `GET`
+- Path: `/reviewers/{id}`
+- Description: Get the reviewer by id
+- Example Response:
+  Status: `200`
+
+  ```json
+  {
+    "id": 42,
+    "email": "arthur.dent@space.com",
+    "name": "Arthur Philip Dent",
+    "country": "GBR",
+    "created_at": "2024-12-29T11:11:11",
+    "updated_at": "2024-12-29T15:21:59",
+  }
+  ```
+
+###### PUT `/reviewers/{id}`
+
+- Verb: `PUT`
+- Path: `/reviewers/{id}`
+- Description: Update the reviewer by id
+- Example Response:
+  Status: `200`
+
+  ```json
+  {
+    "id": 42,
+    "email": "arthur.dent@space.com",
+    "name": "Arthur Philip Dent",
+    "country": "GBR",
+    "created_at": "2024-12-29T11:11:11",
+    "updated_at": "2024-12-29T15:21:59",
+  }
+  ```
+
+###### DELETE `/reviewers/{id}`
+
+- Verb: `DELETE`
+- Path: `/reviewers/{id}`
+- Description: Delete the reviewer by id
+- Example Response:
+  Status: `204`
+- Errors:
+  - If the reviewer has reviews in the review table then it should not be deleted. A `409` status code should be returned with explanatory error message
+
+##### Reviews
+
+###### GET `/reviews`
+
+- Verb: `GET`
+- Path: `/reviews`
+- Description: Get all reviews
+- Pagination: Page-based pagination
+- Query Parameters:
+  - `rating`
+    - Filter reviews by there rating. Either by providing exact rating value or by providing a valid operator followed by a rating value. Valid operators are `eq:`, `gt:`, `gte:`, `lt:` and `lte:`.
+    - Optional string, matching the pattern `^((eq|gte?|lte?):)?[1-5]$`
+    - Example: `?rating=3` or `?rating=gte:3`
+  - `date`
+    - Filter reviews by there date. Either by providing exact date value or by providing a valid operator followed by a rating value. This is a date in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format: `YYYY-MM-DD`. Valid operators are `eq:`, `gt:`, `gte:`, `lt:` and `lte:`. To filter for a specific date range, provide multiple parameters, one using `gt`/`gte` operator and the other using `lt`/`lte` operator.
+    - Optional array (strings), matching the pattern `^((eq|gte?|lte?):)?(19|20)\d{2}-(0[1-9]|1[0,1,2])-(0[1-9]|[12][0-9]|3[01])$"`
+    - Example: `?date=2024-01-01` or `?date=ge:2024-06-14` or `?date=gte:2024-01-01&date=lte:2024-12-31`
+  - `reviewerId`
+    - Filter reviews for a specific user.
+    - Optional int
+    - Example: `?reviewerId=44`
+  - `orderBy`
+    - The order the reviews should be ordered by. Must be either `asc:` or `desc:` followed by one of the returned keys. If multiple orderBy parameters are provided, the results will be ordered according to the order of the parameters.
+    - Optional array  (strings) , matching the pattern `^(asc|desc):\w+$`
+    Default: `?orderBy=desc:date&orderBy=desc:rating`
+    - Example: `?orderBy=asc:rating` or `?orderBy=asc:rating&orderBy=desc:date`
+  - `perPage`
+    - The number of results per page (max 100)
+    - Optional int, default 30. Minimum 1 & Maximum 100
+    - Example: `?perPage=50`
+  - `page`
+    - The page number of the results to fetch
+    - Optional int, default 1. Minimum 1
+    - Example: `?page=2`
+- Example Response:
+  Status: `200`
+
+  ```json
+  {
+    [
+      {
+        "id": 99,
+        "reviewer_id": 200,
+        "title": "A Dream Come True",
+        "rating": 5,
+        "content": "I woke up this morning and my wildest dream was real",
+        "created_at": "2024-12-29T12:00:01",
+        "updated_at": null
+      },
+      {
+        "id": 100,
+        "reviewer_id": 88,
+        "title": "Nothing Nice 2 Say",
+        "rating": 1,
+        "content": "If you have nothing nice to say, say nothing!!",
+        "created_at": "2024-12-29T12:23:47",
+        "updated_at": null
+      }
+    ]
+    "total": 2,
+    "next_page": null,
+    "previous_page" null
+  }
+  ```
+
+###### POST `/reviews`
+
+- Verb: `POST`
+- Path: `/reviews`
+- Description: Create a new review
+- Example Response:
+  Status: `201`
+
+  ```json
+  {
+    "id": 99,
+    "reviewer_id": 200,
+    "title": "A Dream Come True",
+    "rating": 5,
+    "content": "I woke up this morning and my wildest dream was real",
+    "created_at": "2024-12-29T12:00:01",
+    "updated_at": null
+  }
+  ```
+
+###### GET `/reviews/{id}`
+
+- Verb: `GET`
+- Path: `/reviews/{id}`
+- Description: Get the review by id
+- Example Response:
+  Status: `200`
+
+  ```json
+  {
+    "id": 99,
+    "reviewer_id": 200,
+    "title": "A Dream Come True",
+    "rating": 5,
+    "content": "I woke up this morning and my wildest dream was real",
+    "created_at": "2024-12-29T12:00:01",
+    "updated_at": "2024-12-29T12:31:00"
+  }
+  ```
+
+###### PUT `/reviews/{id}`
+
+- Verb: `PUT`
+- Path: `/reviews/{id}`
+- Description: Update the review by id
+- Example Response:
+  Status: `200`
+
+  ```json
+  {
+    "id": 99,
+    "reviewer_id": 200,
+    "title": "A Dream Come True",
+    "rating": 5,
+    "content": "I woke up this morning and my wildest dream was real",
+    "created_at": "2024-12-29T12:00:01",
+    "updated_at": "2024-12-29T12:31:00"
+  }
+  ```
+
+###### DELETE `/reviews/{id}`
+
+- Verb: `DELETE`
+- Path: `/reviews/{id}`
+- Description: Delete the review by id
+- Example Response:
+  Status: `204`
 
 ### Non-Functional Design
 
 #### Personally Identifiable Information
 
-`reviewer_name` ("Reviewer Name" in CSV), `reviewer_email` ("Email Address" in CSV) and `reviewer_country` ("Country" in CSV) columns are PII. `reviewer_name` and `reviewer_email` should be encrypted in the database, `country` will then be pseudo-anonymised.
+The reviewer table and CSV file for initial population of database contain the following PII columns:
 
-`review_title` ("Review Title" in CSV) and `review_content` ("Review Content" in CSV) are free text columns and could contain PII. While this is a risk, handling this is out of current scope.
+- `reviewer_name` ("Reviewer Name" in CSV)
+- `reviewer_email` ("Email Address" in CSV)
+- `reviewer_country` ("Country" in CSV)
 
-#### Monitoring & Alerting
+If the `reviewer_name` and `reviewer_email` columns are encrypted in the database, then `country` would be pseudo-anonymised and could remain in plain text.
 
-As a toy application, beyond logging no monitoring or alterting will be implamented.
+Additionally the following columns in the review table (and CSV file) are free text columns and so could contain PII.
+
+- `review_title` ("Review Title" in CSV)
+- `review_content` ("Review Content" in CSV)
+
+While this is a risk, handling this is out of the current scope, see [Future Improvements and Optimisations](#future-improvements-and-optimisations) for details on how this could be managed.
+
+SQLite doesn't have any column level encryptions functions, but does support the encryption of the whole database file. Will use [SQLCipher](https://github.com/sqlcipher/sqlcipher?tab=readme-ov-file#sqlcipher), which adds 256 bit AES encryption of database files and other security features. The database file will be encrypted and a key will be required to read the data.
+
+Encryption and decryption could be managed in the application layer, but as the API is expected to return the data with PII this would add additional performance overhead with little additional security benefit. Ensuring strong [Authn](#authentication) and [Authz](#authorization) implementation and process for granting them will add more security benefits than column level encryption at this stage.
 
 #### Authentication
 
-Use simple API token for security... This can be set via environment variable for now
+Start with a simple API key-based authentication approach. Users will pass there api key as a header (`x-api-key`).
+
+See [Future Improvements and Optimisations](#future-improvements-and-optimisations) for a more robust token based approach.
+
+#### Authorization
+
+Currently the api has no gradual authorization or RBAC controls. If a user has access to the API then they have full read & write permissions.
+
+#### Monitoring & Alerting
+
+As a toy application, beyond logging no monitoring or alerting will be implemented.
 
 ## Further Considerations
 
 ### Future Improvements and Optimisations
 
-- Consider integrating a proper authentication system like OAuth2 or JWT for more robust security
-- Implament OpenTelemetry as ASGI middleware that could then be exported to any OpenTelemetry compliant backend.
-- Detecting and handling any PII in free text fields
-- Offer separate endpoints that returns reviewer without pii in plane
+Below are a number of areas in which the API could be improved, though whether or not they should be implamed would depend on future requirements.
+
+<!-- TODO: Add more details on how these might be implamend -->
+
+- **Authentication**: Replace API key authn, with a more robust OAuth2 or JWT token approach
+
+- **Authorization**: implement different permission levels. Separate out read, write and delete permissions. Also add PII (see PII in plain text) & Non-PII read permissions (see deterministically encrypted PII values); have Non-PII read permission as default.
+
+- **Observability**: Add OpenTelemetry middleware for trace collection, that could then be exported to any OpenTelemetry compliant systems like Prometheus or Elastic.
+
+- **PII Handling**: Detecting and handling any PII in free text fields. [Microsoft Presidion](https://microsoft.github.io/presidio/) could be intergrated as FastAPI middleware to handle detectiona and anonymisation.
+
+- **API Security**: Add rate limiting
+
+- **Performance**: Run load testing to identify performance issues and look at options to mitigate these
+
+- **Functionality**: Implament and test multi-language support for review text fields, with tests
