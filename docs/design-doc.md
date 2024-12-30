@@ -104,6 +104,14 @@ Functionality:
 For simplicity will use an embedded database stored locally within API container. As this is a transactional system, will use [SQLite](https://www.sqlite.org/).
 
 <!-- TODO: Expand on reasoning behind choice of SQLite -->
+Advantages of SQLite:
+
+-
+- ecosystem of extensions
+
+Limitations of SQLite:
+
+<!-- TODO: Make case for using SQLite -->
 SQLite can and is used in production, though a client-server database like PostgreSQL might be a better fit for the application which has high write throughput requirements. SQLite's limitations will not be met by this application.
 
 Ingestion and API will use an Object Relational Mapper (ORM), so switching to a different database running on an external server in the future will be straightforward and require minimal code changes.
@@ -118,24 +126,24 @@ The data contains two clear entities Reviewer and Review, which has a one-to-man
 
 | Column Name | Type | PII | Notes |
 |-------------|------|-----|-------|
-| reviewer_id | INTEGER | False | Primary Key |
-| reviewer_email | TEXT | True | Unique |
-| reviewer_name | TEXT | True |  |
-| reviewer_country | TEXT | False | ISO-3166 country code |
-| reviewer_created_at | TIMESTAMP | False | Nullable |
-| reviewer_updated_at | TIMESTAMP | False | Nullable, default NULL |
+| id | INTEGER | False | Primary Key |
+| email | TEXT | True | Unique |
+| name | TEXT | True |  |
+| country | TEXT | False | ISO-3166 country code |
+| created_at | TIMESTAMP | False | Nullable |
+| updated_at | TIMESTAMP | False | Nullable, default NULL |
 
 ###### Review Table
 
 | Column Name | Type | PII | Notes |
 |-------------|------|-----|-------|
-| review_id | INTEGER | False | Primary Key |
+| id | INTEGER | False | Primary Key |
 | reviewer_id | INTEGER | False | Foreign key (Reviewer) |
-| review_title | TEXT | False | Free text field |
-| review_rating | INTEGER | False | Between 1 & 5 |
-| review_content | TEXT | False | Free text field |
-| review_created_at | TIMESTAMP | False | |
-| review_updated_at | TIMESTAMP | False | Nullable, default NULL|
+| title | TEXT | False | Free text field |
+| rating | INTEGER | False | Between 1 & 5 |
+| content | TEXT | False | Free text field |
+| created_at | TIMESTAMP | False | |
+| updated_at | TIMESTAMP | False | Nullable, default NULL|
 
 #### API
 
@@ -172,16 +180,13 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
         "id": 42,
         "email": "arthur.dent@space.com",
         "name": "Arthur Philip Dent",
-        "country": "GBR",
-        "created_at": "2024-12-29T11:11:11",
-        "updated_at": null,
+        "country": "GBR"
       },
       {
         "id": 43,
         "email": "fordprefect@betelgeusian.xxx",
         "name": "Ford Prefect",
-        "created_at": "2024-12-30T04:48:12",
-        "updated_at": "2024-12-30T04:55:37",
+        "country": "ESP"
       }
     ]
   "total": 2,
@@ -203,9 +208,7 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
     "id": 42,
     "email": "arthur.dent@space.com",
     "name": "Arthur Philip Dent",
-    "country": "GBR",
-    "created_at": "2024-12-29T11:11:11",
-    "updated_at": null,
+    "country": "GBR"
   }
   ```
 
@@ -225,15 +228,13 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
     "id": 42,
     "email": "arthur.dent@space.com",
     "name": "Arthur Philip Dent",
-    "country": "GBR",
-    "created_at": "2024-12-29T11:11:11",
-    "updated_at": "2024-12-29T15:21:59",
+    "country": "GBR"
   }
   ```
 
-###### PUT `/reviewers/{id}`
+###### PATCH `/reviewers/{id}`
 
-- Verb: `PUT`
+- Verb: `PATCH`
 - Path: `/reviewers/{id}`
 - Description: Update the reviewer by id
 - Example Response:
@@ -244,9 +245,7 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
     "id": 42,
     "email": "arthur.dent@space.com",
     "name": "Arthur Philip Dent",
-    "country": "GBR",
-    "created_at": "2024-12-29T11:11:11",
-    "updated_at": "2024-12-29T15:21:59",
+    "country": "GBR"
   }
   ```
 
@@ -302,21 +301,17 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
     [
       {
         "id": 99,
-        "reviewer_id": 200,
+        "reviewerId": 200,
         "title": "A Dream Come True",
         "rating": 5,
-        "content": "I woke up this morning and my wildest dream was real",
-        "created_at": "2024-12-29T12:00:01",
-        "updated_at": null
+        "content": "I woke up this morning and my wildest dream was real"
       },
       {
         "id": 100,
-        "reviewer_id": 88,
+        "reviewerId": 88,
         "title": "Nothing Nice 2 Say",
         "rating": 1,
-        "content": "If you have nothing nice to say, say nothing!!",
-        "created_at": "2024-12-29T12:23:47",
-        "updated_at": null
+        "content": "If you have nothing nice to say, say nothing!!"
       }
     ]
     "total": 2,
@@ -336,12 +331,10 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
   ```json
   {
     "id": 99,
-    "reviewer_id": 200,
+    "reviewerId": 200,
     "title": "A Dream Come True",
     "rating": 5,
-    "content": "I woke up this morning and my wildest dream was real",
-    "created_at": "2024-12-29T12:00:01",
-    "updated_at": null
+    "content": "I woke up this morning and my wildest dream was real"
   }
   ```
 
@@ -356,18 +349,16 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
   ```json
   {
     "id": 99,
-    "reviewer_id": 200,
+    "reviewerId": 200,
     "title": "A Dream Come True",
     "rating": 5,
-    "content": "I woke up this morning and my wildest dream was real",
-    "created_at": "2024-12-29T12:00:01",
-    "updated_at": "2024-12-29T12:31:00"
+    "content": "I woke up this morning and my wildest dream was real"
   }
   ```
 
-###### PUT `/reviews/{id}`
+###### PATCH `/reviews/{id}`
 
-- Verb: `PUT`
+- Verb: `PATCH`
 - Path: `/reviews/{id}`
 - Description: Update the review by id
 - Example Response:
@@ -376,12 +367,10 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
   ```json
   {
     "id": 99,
-    "reviewer_id": 200,
+    "reviewerId": 200,
     "title": "A Dream Come True",
     "rating": 5,
-    "content": "I woke up this morning and my wildest dream was real",
-    "created_at": "2024-12-29T12:00:01",
-    "updated_at": "2024-12-29T12:31:00"
+    "content": "I woke up this morning and my wildest dream was real"
   }
   ```
 
@@ -399,16 +388,16 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
 
 The reviewer table and CSV file for initial population of database contain the following PII columns:
 
-- `reviewer_name` ("Reviewer Name" in CSV)
-- `reviewer_email` ("Email Address" in CSV)
-- `reviewer_country` ("Country" in CSV)
+- `reviewer.name` ("Reviewer Name" in CSV)
+- `reviewer.email` ("Email Address" in CSV)
+- `reviewer.country` ("Country" in CSV)
 
-If the `reviewer_name` and `reviewer_email` columns are encrypted in the database, then `country` would be pseudo-anonymised and could remain in plain text.
+If the `reviewer.name` and `reviewer.email` columns are encrypted in the database, then `reviewer.country` would be pseudo-anonymised and could remain in plain text.
 
 Additionally the following columns in the review table (and CSV file) are free text columns and so could contain PII.
 
-- `review_title` ("Review Title" in CSV)
-- `review_content` ("Review Content" in CSV)
+- `review.title` ("Review Title" in CSV)
+- `review.content` ("Review Content" in CSV)
 
 While this is a risk, handling this is out of the current scope, see [Future Improvements and Optimisations](#future-improvements-and-optimisations) for details on how this could be managed.
 

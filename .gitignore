@@ -1,6 +1,9 @@
 # General
 .DS_Store
 
+# sqlite database files
+*.db
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
