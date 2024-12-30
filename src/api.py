@@ -9,7 +9,7 @@ from sqlmodel import SQLModel
 
 from .config import DATABASE, ENVIRONMENT, LOG_FORMAT, LOG_LEVEL, PROJECT_NAME
 from .database import engine
-from .ingest import populate_database_from_csv
+from .ingest import load_database_from_csv
 from .reviewers.router import router as reviewers_router
 from .reviews.router import router as reviews_router
 
@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
         log.info("Database file doesn't exist")
         SQLModel.metadata.create_all(engine)
         log.info("Created Database")
-        populate_database_from_csv("./data/dataops_tp_reviews.csv")
+        load_database_from_csv("./data/dataops_tp_reviews.csv")
     yield
 
 
