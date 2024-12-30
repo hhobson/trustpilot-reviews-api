@@ -93,14 +93,12 @@ def database(reviewers_data: List[ReviewerCreate], reviews_data: List[ReviewCrea
     SQLModel.metadata.create_all(engine)
 
     with Session(engine) as session:
-        for reviewer in reviewers_data:
-            db_reviewer = Reviewer.model_validate(reviewer.model_dump())
-            session.add(db_reviewer)
+        db_reviewers = [Reviewer.model_validate(reviewer) for reviewer in reviewers_data]
+        session.add_all(db_reviewers)
         session.commit()
 
-        for review in reviews_data:
-            db_review = Review.model_validate(review)
-            session.add(db_review)
+        db_reviews = [Review.model_validate(review) for review in reviews_data]
+        session.add_all(db_reviews)
         session.commit()
     yield engine
 
