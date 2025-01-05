@@ -19,6 +19,7 @@ console_handler = logging.StreamHandler(stream=sys.stdout)
 console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
 logging.basicConfig(level=LOG_LEVEL, handlers=[console_handler])
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if not DATABASE.is_file():

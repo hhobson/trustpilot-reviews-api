@@ -86,9 +86,9 @@ def load_row(row_number: int, row: dict, session: Session) -> Tuple[bool]:
                 "created_at": datetime.strptime(row["Review Date"], "%Y-%m-%d"),
             }
         )
-    except ValidationError as err:
+    except (ValidationError, ValueError) as err:
         # If invalid review then skip review
-        log.warning(f"Review Validation error on row {row}: {err}")
+        log.warning(f"Review Validation error on row {row_number}: {err}")
         log.warning(f"Invalid Review data, skipping review from row {row_number}")
         return reviewer_loaded, review_loaded
     session.add(db_review)
