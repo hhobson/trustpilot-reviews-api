@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 
 import emoji
@@ -6,7 +7,9 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session, func, select
 
+from src.reviewers.models import ReviewerCreate
 from src.reviews.models import Review, ReviewCreate
+from src.utils import OPERATOR_MAPPING
 
 from ..conftest import REVIEWERS_COUNT, REVIEWS_COUNT
 
@@ -21,6 +24,76 @@ def test_get_reviews(test_client: TestClient):
     data = response.json()
     assert isinstance(data, list)
     assert len(data) == REVIEWS_COUNT
+
+
+# TODO: Improve performance of this test and add more test cases
+@pytest.mark.parametrize(
+    "rating_filter, date_filter, reviewer_id_filter",
+    [
+        ("eq:5", None, None),
+        ("gt:3", None, None),
+        ("lte:2", None, None),
+        (None, "gte:2024-06-01", None),
+        (None, "lt:2024-06-01", None),
+        (None, None, 5),
+        ("eq:4", "gte:2024-01-01", 3),
+    ]
+)
+def test_get_reviews_dynamic(
+    test_client: TestClient,
+    session: Session,
+    rating_filter,
+    date_filter,
+    reviewer_id_filter,
+):
+    all_reviews = session.exec(select(Review)).all()
+
+    filtered_reviews = all_reviews
+    if rating_filter:
+        op, _, value = rating_filter.partition(":")
+        operator = OPERATOR_MAPPING[op]
+        filtered_reviews = [r for r in filtered_reviews if operator(r.rating, int(value))]
+
+    if date_filter:
+        op, _, value = date_filter.partition(":")
+        operator = OPERATOR_MAPPING[op]
+        filter_date = datetime.strptime(value, "%Y-%m-%d").date()
+        filtered_reviews = [r for r in filtered_reviews if operator(r.created_at.date(), filter_date)]
+
+    if reviewer_id_filter:
+        filtered_reviews = [r for r in filtered_reviews if r.reviewer_id == reviewer_id_filter]
+
+    params = {}
+    if rating_filter:
+        params["rating"] = rating_filter
+    if date_filter:
+        params["date"] = date_filter
+    if reviewer_id_filter:
+        params["ReviewerId"] = reviewer_id_filter
+
+    response = test_client.get("/reviews", params=params)
+    assert response.status_code == status.HTTP_200_OK
+
+    response_data = response.json()
+    assert isinstance(response_data, list)
+    assert len(response_data) == len(filtered_reviews)
+
+    for review_response in response_data:
+        matching_review = next(r for r in filtered_reviews if r.id == review_response["id"])
+
+        if rating_filter:
+            op, _, value = rating_filter.partition(":")
+            operator = OPERATOR_MAPPING[op]
+            assert operator(matching_review.rating, int(value))
+
+        if date_filter:
+            op, _, value = date_filter.partition(":")
+            operator = OPERATOR_MAPPING[op]
+            filter_date = datetime.strptime(value, "%Y-%m-%d").date()
+            assert operator(matching_review.created_at.date(), filter_date)
+
+        if reviewer_id_filter:
+            assert matching_review.reviewer_id == reviewer_id_filter
 
 
 # POST /reviews

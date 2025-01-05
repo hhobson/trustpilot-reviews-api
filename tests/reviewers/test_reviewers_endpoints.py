@@ -7,7 +7,7 @@ from sqlmodel import Session, func, select
 
 from src.reviewers.models import Reviewer, ReviewerCreate
 
-from ..conftest import COUNTY_CODES, FIXED_REVIEWER_EMAIL, REVIEWERS_COUNT
+from ..conftest import COUNTY_CODES, FIX_COUNTRY, FIXED_REVIEWER_EMAIL, REVIEWERS_COUNT
 
 ROUTE_URL = "/reviewers"
 
@@ -21,6 +21,19 @@ def test_get_reviewers(test_client: TestClient):
     assert isinstance(data, list)
     assert len(data) == REVIEWERS_COUNT
 
+
+def test_get_reviewers_country_query_param(test_client: TestClient):
+    response = test_client.get(f"{ROUTE_URL}/?country={FIX_COUNTRY}")
+    assert response.status_code == status.HTTP_200_OK
+
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) < REVIEWERS_COUNT
+
+
+def test_get_reviewers_error(test_client: TestClient):
+    response = test_client.get(f"{ROUTE_URL}/?country=XXX")
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 # POST /reviewers
 @pytest.mark.parametrize(

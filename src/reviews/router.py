@@ -1,18 +1,70 @@
-from typing import List
 
-from fastapi import APIRouter, HTTPException, status
+from datetime import datetime
+from typing import Annotated, List
+
+from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from ..database import Session
+from ..utils import OPERATOR_MAPPING
 from .models import Review, ReviewCreate, ReviewResponce, ReviewUpdate
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 
 
 @router.get("/", response_model=List[ReviewResponce])
-def get_reviews(session: Session):
-    reviews = session.exec(select(Review)).all()
+def get_reviews(
+    session: Session,
+    rating: Annotated[
+        str | None,
+        Query(
+            title="Rating",
+            description="Filter reviews by there rating. Either by providing exact rating value or by providing a valid operator followed by a rating value. Valid operators are `eq:`, `gt:`, `gte:`, `lt:` and `lte:`.",
+            pattern="^((eq|gte?|lte?):)?[1-5]$",
+        ),
+    ] = None,
+    date: Annotated[
+        str | None,
+        Query(
+            title="Date",
+            description="Filter reviews by there date they were created. Either by providing exact date value or by providing a valid operator followed by a rating value. This is a date in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format: `YYYY-MM-DD`. Valid operators are `eq:`, `gt:`, `gte:`, `lt:` and `lte:`. To filter for a specific date range, provide multiple parameters, one using `gt`/`gte` operator and the other using `lt`/`lte` operator.",
+            pattern="((eq|gte?|lte?):)?(19|20)\d{2}-(0[1-9]|1[0,1,2])-(0[1-9]|[12][0-9]|3[01])$",
+        ),
+    ] = None,
+    reviewer_id: Annotated[
+        int | None,
+        Query(
+            title="Reviewer Id",
+            description="Filter reviews by a specific user.",
+            alias="ReviewerId",
+            gt=0,
+        ),
+    ] = None,
+):
+    query = select(Review)
+    if rating:
+        if ":" in rating:
+            op, _, value = rating.partition(":")
+            operator = OPERATOR_MAPPING.get(op)
+            query = query.where(operator(Review.rating, value))
+        else:
+            query = query.where(Review.rating == int(rating))
+
+    if date:
+        if ":" in date:
+            op, _, value = date.partition(":")
+            operator = OPERATOR_MAPPING.get(op)
+            query_date = datetime.strptime(value, "%Y-%m-%d")
+            query = query.where(operator(Review.created_at, query_date))
+        else:
+            query_date = datetime.strptime(date, "%Y-%m-%d")
+            query = query.where(Review.created_at == query_date)
+
+    if reviewer_id:
+        query = query.where(Review.reviewer_id == reviewer_id)
+
+    reviews = session.exec(query).all()
     return reviews
 
 

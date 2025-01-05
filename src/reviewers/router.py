@@ -1,6 +1,7 @@
-from typing import List
+from typing import Annotated, List
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
+from pydantic_extra_types.country import CountryAlpha3
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -11,9 +12,21 @@ router = APIRouter(prefix="/reviewers", tags=["reviewers"])
 
 
 @router.get("/", response_model=List[ReviewerResponce])
-def get_reviewers(session: Session):
-    reviewers = session.exec(select(Reviewer)).all()
-    print(len(reviewers))
+def get_reviewers(
+    session: Session,
+    country: Annotated[
+        CountryAlpha3 | None,
+        Query(
+            title="Country Code",
+            description="Filter reviewers from a specific country, using valid [ISO 3166 three letter country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3)",
+        ),
+    ] = None,
+):
+    query = select(Reviewer)
+    if country:
+        query = query.where(Reviewer.country == country)
+
+    reviewers = session.exec(query).all()
     return reviewers
 
 
