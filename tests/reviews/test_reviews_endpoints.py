@@ -36,7 +36,7 @@ def test_get_reviews(test_client: TestClient):
         (None, "lt:2024-06-01", None),
         (None, None, 5),
         ("eq:4", "gte:2024-01-01", 3),
-    ]
+    ],
 )
 def test_get_reviews_dynamic(
     test_client: TestClient,

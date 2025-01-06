@@ -35,6 +35,7 @@ def test_get_reviewers_error(test_client: TestClient):
     response = test_client.get(f"{ROUTE_URL}/?country=XXX")
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
+
 # POST /reviewers
 @pytest.mark.parametrize(
     "name, email, country",

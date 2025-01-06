@@ -13,6 +13,7 @@ OPERATOR_MAPPING = {
     "gte": operator.ge,
 }
 
+
 def demojize_str(text: str) -> str:
     """Convert any unicode emojis to emoji shortcodes"""
     if emoji.emoji_count(text):

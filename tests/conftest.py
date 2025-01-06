@@ -45,7 +45,6 @@ def reviewers_data():
         )
     )
 
-
     for i in range(1, REVIEWERS_COUNT):
         email = FAKER.unique.email()
         name = FAKER.name()
@@ -104,7 +103,12 @@ def database(reviewers_data: List[ReviewerCreate], reviews_data: List[ReviewCrea
 
         start_date = datetime(2024, 1, 1, 0, 0, 00, 000000)
         end_date = datetime(2025, 1, 1, 0, 0, 00, 000000)
-        db_reviews = [Review.model_validate({**review.model_dump(), "created_at": FAKER.date_between(start_date, end_date)}) for review in reviews_data]
+        db_reviews = [
+            Review.model_validate(
+                {**review.model_dump(), "created_at": FAKER.date_between(start_date, end_date)}
+            )
+            for review in reviews_data
+        ]
         session.add_all(db_reviews)
         session.commit()
     yield engine
