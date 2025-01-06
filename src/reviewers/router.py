@@ -22,6 +22,10 @@ def get_reviewers(
         ),
     ] = None,
 ):
+    """## Retrieve user information on all users who can authored reviews
+
+    Users can be filtered by their country.
+    """
     query = select(Reviewer)
     if country:
         query = query.where(Reviewer.country == country)
@@ -32,6 +36,7 @@ def get_reviewers(
 
 @router.post("/", response_model=ReviewerResponce, status_code=status.HTTP_201_CREATED)
 def create_reviewer(reviewer: ReviewerCreate, session: Session):
+    """## Create a new user who can author reviews"""
     db_reviewer = Reviewer.model_validate(reviewer)
     session.add(db_reviewer)
     try:
@@ -44,6 +49,7 @@ def create_reviewer(reviewer: ReviewerCreate, session: Session):
 
 @router.get("/{reviewer_id}", response_model=ReviewerResponce)
 def get_reviewer(reviewer_id: int, session: Session):
+    """## Retrieve a specific user by their id"""
     reviewer = session.get(Reviewer, reviewer_id)
     if not reviewer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reviewer not found")
@@ -52,6 +58,10 @@ def get_reviewer(reviewer_id: int, session: Session):
 
 @router.patch("/{reviewer_id}", response_model=ReviewerResponce)
 def update_reviewer(reviewer_id: int, reviewer: ReviewerUpdate, session: Session):
+    """## Update a specific user
+
+    The users name, email and country can be updated. The request body only needs to contain fields that should be changed.
+    """
     db_reviewer = session.get(Reviewer, reviewer_id)
     if not db_reviewer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reviewer not found")
@@ -69,6 +79,12 @@ def update_reviewer(reviewer_id: int, reviewer: ReviewerUpdate, session: Session
 
 @router.delete("/{reviewer_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
 def delete_reviewer(reviewer_id: int, session: Session):
+    """## Delete a user
+
+    All of a users reviews must be deleted before the user can be deleted.
+
+    ![Trying to Delete](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExOTNmOGs5dzFpaGRwOHh2YmY0MGRoNWxwbjFkbHJtNHprNm9kbXV2ZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7ILa7CZLxE0Ew/giphy.gif)
+    """
     reviewer = session.get(Reviewer, reviewer_id)
     if not reviewer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reviewer not found")

@@ -7,7 +7,6 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session, func, select
 
-from src.reviewers.models import ReviewerCreate
 from src.reviews.models import Review, ReviewCreate
 from src.utils import OPERATOR_MAPPING
 
