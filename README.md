@@ -19,9 +19,11 @@ From the root directory of the repo, run:
 
 The API will be then be avaliable at <http://localhost:8000/> on your machine and you can view the API docs <http://localhost:8000/docs>. The docs will take you though the avaliable endpoints and allow you try them out.
 
- [!Warning]
-> Currently the database can't be persisted after the container stops. So all data created and edited will be lost once the container stops.
-<!-- Command once database can be persisted `docker run -it -e DATABASE_PASSPHRASE="abc123" -v ./volume/reviews.db:/app/reviews.db -p 8000:8000 reviews-fastapi:latest` -->
+### Persist Database
+
+The database file can be persisted after the container has been stop, so that changes made through the api will be avaliable in future containers. To do this, a local directory where the database file will be created, must be mounted to the container.
+
+To persist the database, run `docker run -it -e DATABASE_PASSPHRASE="abc123" -v ./volume/sqlite/:/app/sqlite -e DATABASE_PATH="/app/sqlite" -p 8000:8000 reviews-fastapi:latest`
 
 ## Development Setup
 

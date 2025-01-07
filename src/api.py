@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, inspect
 
 from .config import DATABASE, ENVIRONMENT, LOG_FORMAT, LOG_LEVEL, PROJECT_NAME
 from .database import engine
@@ -28,11 +28,16 @@ logging.basicConfig(level=LOG_LEVEL, handlers=[console_handler])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if not DATABASE.is_file():
-        log.info("Database file doesn't exist")
+    table_names = inspect(engine).get_table_names()
+    if not table_names:
+        log.info("Creating Database tables")
         SQLModel.metadata.create_all(engine)
-        log.info("Created Database")
+        log.info("Created Database tables")
+
         load_database_from_csv("./data/dataops_tp_reviews.csv")
+    else:
+        log.info("Database tables already exist")
+
     yield
 
 
