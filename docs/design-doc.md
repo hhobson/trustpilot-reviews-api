@@ -10,7 +10,7 @@ Design for an API that allows CRUD operations to be performed on Trustpilot Revi
 
 The objective is to build an API as an interface to a database containing the Trustpilot Review dataset. The API needs to allow business users to perform CRUD operations on the dataset.
 
-As a take home-task, this will be a toy application akin to a Proof of Concept. The code should be written to a production standard, but the architecture will not be production ready. There should be a route to production that doesn't require significant code changes and any unhandled edge cases should be highlighted.
+As a take home-task, this will be a toy application akin to a Proof of Concept. The code should be written to a production standard, but the application will not be production ready. There should be a route to production that doesn't require significant code or architecutre changes.
 
 ### Assumptions
 
@@ -25,7 +25,7 @@ The design has been built on the basis of the following assumptions. These have 
 
 ### Out of Scope
 
-- A production ready
+- Deployment or having the application fully production ready
 - Detection and handling of PII in free text fields
 - Advanced user authentication or role-based access control
 
@@ -103,16 +103,7 @@ Functionality:
 
 For simplicity will use an embedded database stored locally within API container. As this is a transactional system, will use [SQLite](https://www.sqlite.org/).
 
-<!-- TODO: Expand on reasoning behind choice of SQLite -->
-Advantages of SQLite:
-
--
-- ecosystem of extensions
-
-Limitations of SQLite:
-
-<!-- TODO: Make case for using SQLite -->
-SQLite can and is used in production, though a client-server database like PostgreSQL might be a better fit for the application which has high write throughput requirements. SQLite's limitations will not be met by this application.
+Embedded databases, of with SQLite is the OG, are a good fit for smaller business applications, especially early on in a project. SQLite can and is [used in production](https://www.sqlite.org/whentouse.html) and while it's architecture means it will always have scalability limitations, it can handle reasonable scale. A client-server database, like PostgreSQL, will be be a better fit suited for uses with high write throughput, high concurrency, very large dataset (SQLite has a size limit of 281TBs). SQLite's limitations will be more than sufficient to this application.
 
 Ingestion and API will use an Object Relational Mapper (ORM), so switching to a different database running on an external server in the future will be straightforward and require minimal code changes.
 
@@ -274,10 +265,10 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
     - Example: `?rating=3` or `?rating=gte:3`
   - `date`
     - Filter reviews by there date. Either by providing exact date value or by providing a valid operator followed by a rating value. This is a date in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format: `YYYY-MM-DD`. Valid operators are `eq:`, `gt:`, `gte:`, `lt:` and `lte:`. To filter for a specific date range, provide multiple parameters, one using `gt`/`gte` operator and the other using `lt`/`lte` operator.
-    - Optional array (strings), matching the pattern `^((eq|gte?|lte?):)?(19|20)\d{2}-(0[1-9]|1[0,1,2])-(0[1-9]|[12][0-9]|3[01])$"`
+    - Optional array (strings), matching the pattern `^((eq|gte?|lte?):)?(19|20)\d{2}-(0[1-9]|1[0,1,2])-(0[1-9]|[12][0-9]|3[01])$`
     - Example: `?date=2024-01-01` or `?date=ge:2024-06-14` or `?date=gte:2024-01-01&date=lte:2024-12-31`
   - `reviewerId`
-    - Filter reviews for a specific user.
+    - Filter reviews by a specific user.
     - Optional int
     - Example: `?reviewerId=44`
   - `orderBy`
@@ -304,14 +295,16 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
         "reviewerId": 200,
         "title": "A Dream Come True",
         "rating": 5,
-        "content": "I woke up this morning and my wildest dream was real"
+        "content": "I woke up this morning and my wildest dream was real",
+        "created_at": "2025-01-01T01:01:01"
       },
       {
         "id": 100,
         "reviewerId": 88,
         "title": "Nothing Nice 2 Say",
         "rating": 1,
-        "content": "If you have nothing nice to say, say nothing!!"
+        "content": "If you have nothing nice to say, say nothing!!",
+        "created_at": "2025-01-01T02:02:02"
       }
     ]
     "total": 2,
@@ -334,7 +327,8 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
     "reviewerId": 200,
     "title": "A Dream Come True",
     "rating": 5,
-    "content": "I woke up this morning and my wildest dream was real"
+    "content": "I woke up this morning and my wildest dream was real",
+    "created_at": "2025-01-01T01:01:01"
   }
   ```
 
@@ -352,7 +346,8 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
     "reviewerId": 200,
     "title": "A Dream Come True",
     "rating": 5,
-    "content": "I woke up this morning and my wildest dream was real"
+    "content": "I woke up this morning and my wildest dream was real",
+    "created_at": "2025-01-01T01:01:01"
   }
   ```
 
@@ -370,7 +365,8 @@ API paths should map to the data model, with `/reviewers` and `/reviews`
     "reviewerId": 200,
     "title": "A Dream Come True",
     "rating": 5,
-    "content": "I woke up this morning and my wildest dream was real"
+    "content": "I woke up this morning and my wildest dream was real",
+    "created_at": "2025-01-01T01:01:01"
   }
   ```
 
@@ -425,17 +421,21 @@ As a toy application, beyond logging no monitoring or alerting will be implement
 
 Below are a number of areas in which the API could be improved, though whether or not they should be implamed would depend on future requirements.
 
-<!-- TODO: Add more details on how these might be implamend -->
-
 - **Authentication**: Replace API key authn, with a more robust OAuth2 or JWT token approach
 
-- **Authorization**: implement different permission levels. Separate out read, write and delete permissions. Also add PII (see PII in plain text) & Non-PII read permissions (see deterministically encrypted PII values); have Non-PII read permission as default.
+- **Authorization**: Implement different permission levels. Separate out read, write and delete permissions. Also add PII (see PII in plain text) & Non-PII read permissions (see deterministically encrypted PII values); have Non-PII read permission as default. Once using 0Auth, then could look at using scopes.
 
 - **Observability**: Add OpenTelemetry middleware for trace collection, that could then be exported to any OpenTelemetry compliant systems like Prometheus or Elastic.
 
 - **PII Handling**: Detecting and handling any PII in free text fields. [Microsoft Presidion](https://microsoft.github.io/presidio/) could be intergrated as FastAPI middleware to handle detectiona and anonymisation.
 
 - **API Security**: Add rate limiting
+
+- **Disaster Recovery**: [LiteFS](https://fly.io/docs/litefs/) can be used to backup the database and can be used to reconstruct the state of our SQLite database at any point in time, as well as being able to copy changes to another nodes in order to replicate the changes in real-time to our cluster.
+
+- **Data Lake Loading**: Duckdb (OLAT embedded database) can [directly query SQLite files](https://duckdb.org/docs/guides/database_integration/sqlite.html). LiteFS could be used to replicate the database and Duckdb would then able to read the data and either analize it or loading it into a Datawarehouse or Data Lake (or even a Data Lakehouse!!!) with it's extensive support of the ecosystem.
+
+- **Functionality**: Add a reviewers sub route, so you can get a user and all of there reviews in the same api call. Something like `/reviewers/{id}/reviews`
 
 - **Performance**: Run load testing to identify performance issues and look at options to mitigate these
 
