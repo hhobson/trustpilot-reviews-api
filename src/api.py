@@ -11,10 +11,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
-from sqlmodel import SQLModel, inspect
+from sqlmodel import SQLModel
 
-from .config import DATABASE, ENVIRONMENT, LOG_FORMAT, LOG_LEVEL, PROJECT_NAME
-from .database import engine
+from .config import ENVIRONMENT, LOG_FORMAT, LOG_LEVEL, PROJECT_NAME
+from .database import engine, get_table_names
 from .ingest import load_database_from_csv
 from .reviewers.router import router as reviewers_router
 from .reviews.router import router as reviews_router
@@ -28,7 +28,7 @@ logging.basicConfig(level=LOG_LEVEL, handlers=[console_handler])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    table_names = inspect(engine).get_table_names()
+    table_names = get_table_names()
     if not table_names:
         log.info("Creating Database tables")
         SQLModel.metadata.create_all(engine)

@@ -105,6 +105,8 @@ For simplicity will use an embedded database stored locally within API container
 
 Embedded databases, of with SQLite is the OG, are a good fit for smaller business applications, especially early on in a project. SQLite can and is [used in production](https://www.sqlite.org/whentouse.html) and while it's architecture means it will always have scalability limitations, it can handle reasonable scale. A client-server database, like PostgreSQL, will be be a better fit suited for uses with high write throughput, high concurrency, very large dataset (SQLite has a size limit of 281TBs). SQLite's limitations will be more than sufficient to this application.
 
+Use SQLite [Write-Ahead Logging](https://www.sqlite.org/wal.html) (WAL) mode as it allows multiple readers to co-exist with a single writer. Ordinarily, when one connection is holding the write lock, no other connection can write or read until the lock is released. WAL-mode relaxes these restrictions by allowing readers to operate while another connection writes to the database.
+
 Ingestion and API will use an Object Relational Mapper (ORM), so switching to a different database running on an external server in the future will be straightforward and require minimal code changes.
 
 ##### Data Model
@@ -430,8 +432,6 @@ Below are a number of areas in which the API could be improved, though whether o
 - **PII Handling**: Detecting and handling any PII in free text fields. [Microsoft Presidion](https://microsoft.github.io/presidio/) could be intergrated as FastAPI middleware to handle detectiona and anonymisation.
 
 - **API Security**: Add rate limiting
-
-- **Performance**: Switch to use SQLite [Write-Ahead Logging](https://www.sqlite.org/wal.html)
 
 - **Disaster Recovery**: [LiteFS](https://fly.io/docs/litefs/) can be used to backup the database and can be used to reconstruct the state of our SQLite database at any point in time, as well as being able to copy changes to another nodes in order to replicate the changes in real-time to our cluster.
 
