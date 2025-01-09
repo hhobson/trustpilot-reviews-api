@@ -37,8 +37,8 @@ def do_begin(conn):
 def set_sqlite_pragma(dbapi_connection, connection_record):
     """Event that sets SQLite paramas for each database connection"""
     cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA synchronous=NORMAL")
     cursor.execute('PRAGMA key = "{DATABASE_PASSPHRASE}";')
+    cursor.execute("PRAGMA synchronous=NORMAL")
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
