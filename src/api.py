@@ -8,11 +8,12 @@ import logging
 import sys
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from sqlmodel import SQLModel
 
+from .auth import verify_api_key
 from .config import ENVIRONMENT, LOG_FORMAT, LOG_LEVEL, PROJECT_NAME
 from .database import engine, get_table_names
 from .ingest import load_database_from_csv
@@ -45,6 +46,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=f"{PROJECT_NAME}-{ENVIRONMENT}",
     description=__doc__,
+    dependencies=[
+        Depends(verify_api_key)
+    ],
     root_path="/api/v1",
     lifespan=lifespan,
 )

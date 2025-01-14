@@ -25,6 +25,22 @@ def test_get_reviews(test_client: TestClient):
     assert len(data) == REVIEWS_COUNT
 
 
+@pytest.mark.parametrize(
+    "api_key",
+    [
+        (""),
+        ("dud0-lke8jk-aj9d-jkl"),
+        ("dud0-jui83-iha2d-33aa"),
+    ],
+)
+def test_get_reviews_auth_error(test_client: TestClient, api_key: str):
+    response = test_client.get(ROUTE_URL, headers={"X-API-Key": api_key})
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    data = response.json()
+    assert data["detail"] == "Not authenticated"
+
+
 # TODO: Improve performance of this test and add more test cases
 @pytest.mark.parametrize(
     "rating_filter, date_filter, reviewer_id_filter",

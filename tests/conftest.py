@@ -130,12 +130,15 @@ def session(engine: Engine):
 
 @pytest.fixture(scope="function")
 def test_client(session: Session):
-    """Create a test client that uses the override_get_db fixture to return a session."""
+    """Create a test client
+
+    The 'get_db' dependency function is overridden tt return session for test database. The "X-API-Key" header is added for all calls
+    """
 
     def get_session_override():
         return session
 
     app.dependency_overrides[get_session] = get_session_override
-    client = TestClient(app)
+    client = TestClient(app, headers={"X-API-Key": "nja5-dh3ad-85"})
     yield client
     app.dependency_overrides.clear()

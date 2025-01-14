@@ -22,6 +22,22 @@ def test_get_reviewers(test_client: TestClient):
     assert len(data) == REVIEWERS_COUNT
 
 
+@pytest.mark.parametrize(
+    "api_key",
+    [
+        (""),
+        ("dud0-lke8jk-aj9d-jkl"),
+        ("dud0-jui83-iha2d-33aa"),
+    ],
+)
+def test_get_reviews_auth_error(test_client: TestClient, api_key: str):
+    response = test_client.get(ROUTE_URL, headers={"X-API-Key": api_key})
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    data = response.json()
+    assert data["detail"] == "Not authenticated"
+
+
 def test_get_reviewers_country_query_param(test_client: TestClient):
     response = test_client.get(f"{ROUTE_URL}/?country={FIX_COUNTRY}")
     assert response.status_code == status.HTTP_200_OK
