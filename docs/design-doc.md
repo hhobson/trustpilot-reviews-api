@@ -405,7 +405,7 @@ Encryption and decryption could be managed in the application layer, but as the 
 
 #### Authentication
 
-Start with a simple API key-based authentication approach. Users will pass there api key as a header (`x-api-key`).
+Start with a simple API key-based authentication approach. Users will pass there api key as a header (`X-API-Key`).
 
 See [Future Improvements and Optimisations](#future-improvements-and-optimisations) for a more robust token based approach.
 
@@ -437,7 +437,7 @@ Below are a number of areas in which the API could be improved, though whether o
 A more simple alternative would be to use [Litestream](https://litestream.io/), which is designed to just replicate database to object store (like S3).
 For just DR litestream is probably better option, but LiteFS is much more than just DR and allows a scale-out model for SQLite.
 
-- **Data Lake Loading**: DuckDB (OLAT embedded database) can [directly query SQLite files](https://duckdb.org/docs/guides/database_integration/sqlite.html). Litestream/LiteFS could be used to replicate the database and DuckDB would then able to read the data and either analize it or loading it into a Datawarehouse or Data Lake (or even a Data Lakehouse!!!) with it's extensive support of the ecosystem.
+- **Data Lake Loading**: DuckDB (OLAP embedded database) can [directly query SQLite files](https://duckdb.org/docs/guides/database_integration/sqlite.html). Litestream/LiteFS could be used to replicate the database and DuckDB would then able to read the data and either analize it or loading it into a Datawarehouse or Data Lake (or even a Data Lakehouse!!!) with it's extensive support of the ecosystem.
 
 - **Functionality**: Add a reviewers sub route, so you can get a user and all of there reviews in the same api call. Something like `/reviewers/{id}/reviews`
 

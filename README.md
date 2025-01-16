@@ -19,6 +19,8 @@ From the root directory of the repo, run:
 
 The API will be then be avaliable at <http://localhost:8000/> on your machine and you can view the API docs <http://localhost:8000/docs>. The docs will take you though the avaliable endpoints and allow you try them out.
 
+You will need to provide an API Key via the `X-API-Key` header. For the purposes of this toy application any key not starting with `dud0-` will work.
+
 ### Persist Database
 
 The database file can be persisted after the container has been stop, so that changes made through the api will be avaliable in future containers. To do this, a local directory where the database file will be created, must be mounted to the container.
