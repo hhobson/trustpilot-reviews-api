@@ -16,6 +16,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "bandit",
     "ipykernel",
     "pre-commit",
     "ruff",
@@ -50,3 +51,6 @@ ignore = [
 line-ending = "lf"
 docstring-code-format = true
 docstring-code-line-length = 60
+
+[tool.bandit]
+exclude_dirs = ["tests"]
